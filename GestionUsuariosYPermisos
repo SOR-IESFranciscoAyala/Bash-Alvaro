@@ -1,0 +1,109 @@
+#!/bin/bash
+
+# Definir colores para el menú
+RED='\033[1;31m'
+GREEN='\033[1;32m'
+BLUE='\033[1;34m'
+CYAN='\033[1;36m'
+YELLOW='\033[1;33m'
+RESET='\033[0m'
+
+# Funciones ya existentes (no se modifican)
+
+crear_usuario() {
+    read -p "Ingrese el nombre del usuario a crear: " usuario
+    sudo adduser "$usuario"
+    echo -e "${GREEN}Usuario '$usuario' creado con éxito.${RESET}"
+}
+
+crear_grupo() {
+    read -p "Ingrese el nombre del grupo a crear: " grupo
+    sudo groupadd "$grupo"
+    echo -e "${GREEN}Grupo '$grupo' creado con éxito.${RESET}"
+}
+
+anadir_usuario_a_grupo() {
+    read -p "Ingrese el nombre del usuario: " usuario
+    read -p "Ingrese el nombre del grupo: " grupo
+    sudo usermod -aG "$grupo" "$usuario"
+    echo -e "${GREEN}Usuario '$usuario' añadido al grupo '$grupo' con éxito.${RESET}"
+}
+
+modificar_permisos_archivo() {
+    read -p "Ingrese la ruta del archivo: " archivo
+    echo -e "${CYAN}Permisos actuales del archivo:${RESET}"
+    ls -l "$archivo"
+    echo -e "${YELLOW}Ingrese los permisos deseados en formato numérico (ejemplo: 755):${RESET} "
+    read permisos
+    sudo chmod "$permisos" "$archivo"
+    echo -e "${GREEN}Permisos modificados con éxito. Nuevos permisos:${RESET}"
+    ls -l "$archivo"
+}
+
+borrar_usuario() {
+    read -p "Ingrese el nombre del usuario a borrar: " usuario
+    sudo deluser "$usuario"
+    echo -e "${RED}Usuario '$usuario' borrado con éxito.${RESET}"
+}
+
+borrar_grupo() {
+    read -p "Ingrese el nombre del grupo a borrar: " grupo
+    sudo groupdel "$grupo"
+    echo -e "${RED}Grupo '$grupo' borrado con éxito.${RESET}"
+}
+
+sacar_usuario_de_grupo() {
+    read -p "Ingrese el nombre del usuario: " usuario
+    read -p "Ingrese el nombre del grupo: " grupo
+    sudo gpasswd -d "$usuario" "$grupo"
+    echo -e "${RED}Usuario '$usuario' eliminado del grupo '$grupo' con éxito.${RESET}"
+}
+
+# Menú principal
+while true; do
+    echo -e "${BLUE}==================================="
+    echo -e "${CYAN}       GESTIÓN DE PERMISOS       "
+    echo -e "${BLUE}===================================${RESET}"
+    echo -e "${YELLOW}Seleccione una opción:${RESET}"
+    echo -e "${GREEN}1)${RESET} Crear usuario"
+    echo -e "${GREEN}2)${RESET} Crear grupo"
+    echo -e "${GREEN}3)${RESET} Añadir usuario a grupo"
+    echo -e "${GREEN}4)${RESET} Modificar permisos de archivo"
+    echo -e "${GREEN}5)${RESET} Borrar usuario"
+    echo -e "${GREEN}6)${RESET} Borrar grupo"
+    echo -e "${GREEN}7)${RESET} Sacar usuario de grupo"
+    echo -e "${GREEN}8)${RESET} Salir"
+    echo -e "${BLUE}===================================${RESET}"
+    read -p "Opción: " opcion
+
+    case $opcion in
+        1)
+            crear_usuario
+            ;;
+        2)
+            crear_grupo
+            ;;
+        3)
+            anadir_usuario_a_grupo
+            ;;
+        4)
+            modificar_permisos_archivo
+            ;;
+        5)
+            borrar_usuario
+            ;;
+        6)
+            borrar_grupo
+            ;;
+        7)
+            sacar_usuario_de_grupo
+            ;;
+        8)
+            echo -e "${RED}Saliendo del programa.${RESET}"
+            break
+            ;;
+        *)
+            echo -e "${RED}Opción no válida. Intente de nuevo.${RESET}"
+            ;;
+    esac
+done
