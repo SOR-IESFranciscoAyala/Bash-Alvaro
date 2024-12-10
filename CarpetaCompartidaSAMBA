@@ -90,3 +90,4 @@ echo "Configuración completada. La carpeta está lista para ser compartida."
 echo "Puedes acceder a ella desde Windows con la dirección: \\$(hostname -I | awk '{print $1}')\$SAMBA_SHARE_NAME"
 
 
+
