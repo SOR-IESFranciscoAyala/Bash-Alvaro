@@ -1,0 +1,119 @@
+#!/bin/bash
+
+# ----------------------------------------------
+# Script para gestionar una carpeta compartida
+# entre una máquina virtual Ubuntu y un equipo anfitrión.
+# Incluye opciones para crear, eliminar y abrir la carpeta compartida.
+# ----------------------------------------------
+
+# Variables globales
+SHARED_FOLDER_HOST="SharedFolder"  # Nombre de la carpeta compartida en el anfitrión
+MOUNT_POINT="/mnt/shared"          # Punto de montaje en la máquina virtual
+CREDENTIALS_FILE="/root/.smbcredentials"  # Archivo de credenciales
+
+# Función para crear una carpeta compartida
+create_shared_folder() {
+  echo "== Crear carpeta compartida =="
+
+  # Verifica si cifs-utils está instalado
+  if ! command -v mount.cifs &> /dev/null; then
+    echo "Instalando paquetes necesarios..."
+    apt update
+    apt install -y cifs-utils
+  fi
+
+  # Crea el punto de montaje si no existe
+  if [ ! -d "$MOUNT_POINT" ]; then
+    echo "Creando el punto de montaje en $MOUNT_POINT..."
+    mkdir -p "$MOUNT_POINT"
+  fi
+
+  # Solicita credenciales
+  echo "Proporciona las credenciales para el recurso compartido:"
+  read -p "Usuario: " USERNAME
+  read -sp "Contraseña: " PASSWORD
+  echo ""
+
+  # Crea el archivo de credenciales
+  echo "Creando archivo de credenciales en $CREDENTIALS_FILE..."
+  echo "username=$USERNAME" > "$CREDENTIALS_FILE"
+  echo "password=$PASSWORD" >> "$CREDENTIALS_FILE"
+  chmod 600 "$CREDENTIALS_FILE"
+
+  # Monta la carpeta compartida
+  echo "Montando la carpeta compartida..."
+  mount -t cifs "//${SHARED_FOLDER_HOST}" "$MOUNT_POINT" -o credentials=$CREDENTIALS_FILE,vers=3.0
+
+  if [ $? -eq 0 ]; then
+    echo "Carpeta compartida creada y montada exitosamente en $MOUNT_POINT."
+  else
+    echo "Error al montar la carpeta compartida. Verifica los datos proporcionados."
+  fi
+}
+
+# Función para eliminar la carpeta compartida
+delete_shared_folder() {
+  echo "== Eliminar carpeta compartida =="
+
+  # Desmonta la carpeta compartida si está montada
+  if mountpoint -q "$MOUNT_POINT"; then
+    echo "Desmontando la carpeta compartida..."
+    umount "$MOUNT_POINT"
+
+    if [ $? -eq 0 ]; then
+      echo "Carpeta compartida desmontada con éxito."
+    else
+      echo "Error al desmontar la carpeta compartida."
+      return
+    fi
+  fi
+
+  # Elimina el directorio de montaje
+  echo "Eliminando el punto de montaje..."
+  rm -rf "$MOUNT_POINT"
+
+  # Elimina el archivo de credenciales
+  echo "Eliminando el archivo de credenciales..."
+  rm -f "$CREDENTIALS_FILE"
+
+  echo "Carpeta compartida eliminada correctamente."
+}
+
+# Función para abrir la carpeta compartida
+open_shared_folder() {
+  echo "== Abrir carpeta compartida =="
+
+  if [ -d "$MOUNT_POINT" ]; then
+    echo "Abriendo el punto de montaje con el explorador de archivos..."
+    xdg-open "$MOUNT_POINT" &>/dev/null &
+  else
+    echo "La carpeta compartida no existe o no está montada."
+  fi
+}
+
+# Función para mostrar el menú
+show_menu() {
+  while true; do
+    echo ""
+    echo "================================="
+    echo " Gestión de Carpeta Compartida "
+    echo "================================="
+    echo "1. Crear carpeta compartida"
+    echo "2. Eliminar carpeta compartida"
+    echo "3. Abrir carpeta compartida"
+    echo "4. Salir"
+    echo "================================="
+    read -p "Selecciona una opción: " OPTION
+
+    case $OPTION in
+      1) create_shared_folder ;;
+      2) delete_shared_folder ;;
+      3) open_shared_folder ;;
+      4) echo "Saliendo del script. ¡Adiós!"; exit 0 ;;
+      *) echo "Opción no válida. Intenta de nuevo." ;;
+    esac
+  done
+}
+
+# Llama a la función para mostrar el menú
+show_menu
