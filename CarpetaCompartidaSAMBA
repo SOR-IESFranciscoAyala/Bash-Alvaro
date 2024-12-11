@@ -1,93 +1,30 @@
 #!/bin/bash
 
-# Nombre de la carpeta compartida
-SHARED_FOLDER="/home/$(whoami)/carpeta_compartida"
+#Configurar variables
+COMPARTIDO_DIR="/home/$(whoami)/compartido"
 
-# Nombre del recurso compartido de Samba
-SAMBA_SHARE_NAME="compartida"
+#Crear el directorio para compartir
+echo "Creando directorio compartido en: $COMPARTIDO_DIR"
+mkdir -p "$COMPARTIDO_DIR"
+chmod 777 "$COMPARTIDO_DIR"
 
-# Crear la carpeta compartida
-echo "Creando la carpeta compartida en $SHARED_FOLDER..."
-mkdir -p "$SHARED_FOLDER"
-if [ $? -ne 0 ]; then
-    echo "Error al crear la carpeta $SHARED_FOLDER. Abortando."
-    exit 1
-fi
 
-# Asignar permisos adecuados
-echo "Configurando permisos para la carpeta compartida..."
-chmod 770 "$SHARED_FOLDER"  # permisos más restrictivos (solo el dueño y grupo pueden escribir/leer)
-if [ $? -ne 0 ]; then
-    echo "Error al asignar permisos a la carpeta $SHARED_FOLDER. Abortando."
-    exit 1
-fi
+#Configurar el recurso compartido en Samba
+echo "Configurando Samba..."
+sudo bash -c "cat >> /etc/samba/smb.conf" <<EOL
 
-# Instalar Samba si no está instalado
-echo "Instalando Samba si no está ya instalado..."
-sudo apt update
-sudo apt install -y samba
-if [ $? -ne 0 ]; then
-    echo "Error al instalar Samba. Abortando."
-    exit 1
-fi
-
-# Hacer una copia de seguridad del archivo smb.conf
-echo "Creando copia de seguridad de /etc/samba/smb.conf..."
-sudo cp /etc/samba/smb.conf /etc/samba/smb.conf.bak
-if [ $? -ne 0 ]; then
-    echo "Error al crear la copia de seguridad de smb.conf. Abortando."
-    exit 1
-fi
-
-# Agregar configuración de Samba
-echo "Agregando configuración para la carpeta compartida..."
-echo "
-[$SAMBA_SHARE_NAME]
-   path = $SHARED_FOLDER
+[Compartido]
+   path = $COMPARTIDO_DIR
    browseable = yes
    read only = no
+   writable = yes
    guest ok = yes
-   force user = $(whoami)
-   create mask = 0770
-   directory mask = 0770
-   " | sudo tee -a /etc/samba/smb.conf > /dev/null
-if [ $? -ne 0 ]; then
-    echo "Error al agregar la configuración en smb.conf. Abortando."
-    exit 1
-fi
+EOL
 
-# Verificar que el archivo smb.conf se modificó correctamente
-grep -q "[$SAMBA_SHARE_NAME]" /etc/samba/smb.conf
-if [ $? -ne 0 ]; then
-    echo "Error: la configuración de Samba no se añadió correctamente. Abortando."
-    exit 1
-fi
-
-# Reiniciar el servicio Samba
-echo "Reiniciando el servicio Samba..."
+#Reiniciar el servicio de Samba
+echo "Reiniciando Samba..."
 sudo systemctl restart smbd
-if [ $? -ne 0 ]; then
-    echo "Error al reiniciar el servicio Samba. Abortando."
-    exit 1
-fi
 
-# Verificar que el servicio Samba está activo
-sudo systemctl status smbd | grep -q "active (running)"
-if [ $? -ne 0 ]; then
-    echo "El servicio Samba no está activo. Abortando."
-    exit 1
-fi
-
-# Permitir Samba a través del firewall (si está activado)
-echo "Verificando el estado del firewall y permitiendo Samba..."
-sudo ufw allow samba
-if [ $? -ne 0 ]; then
-    echo "Error al configurar el firewall. Abortando."
-    exit 1
-fi
-
-echo "Configuración completada. La carpeta está lista para ser compartida."
-echo "Puedes acceder a ella desde Windows con la dirección: \\$(hostname -I | awk '{print $1}')\$SAMBA_SHARE_NAME"
-
-
-
+#Confirmar la configuración
+echo "Directorio compartido configurado: $COMPARTIDO_DIR"
+echo "¡Configuración completa! Conéctate desde Windows usando: \$(hostname -I | awk '{print $1}')\Compartido"
